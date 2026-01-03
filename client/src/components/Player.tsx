@@ -1,7 +1,6 @@
 import type { Segment } from '../../../shared/types';
 
 interface PlayerProps {
-  isPlaying: boolean;
   hasStarted: boolean;
   listenerCount: number;
   isGenerating: boolean;
@@ -12,7 +11,6 @@ interface PlayerProps {
 }
 
 export function Player({
-  isPlaying,
   hasStarted,
   listenerCount,
   isGenerating,

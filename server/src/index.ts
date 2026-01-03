@@ -220,8 +220,12 @@ Generate a pattern that ${
         permissionMode: 'bypassPermissions',
       },
     })) {
-      if (message.type === 'result' && message.structured_output) {
-        result = message.structured_output;
+      if (message.type === 'result') {
+        // Access structured output from the result message
+        const resultMsg = message as any;
+        if (resultMsg.structured_output) {
+          result = resultMsg.structured_output;
+        }
       }
     }
 
@@ -236,6 +240,7 @@ Generate a pattern that ${
       key: result.key,
       mode: result.mode,
       tempo: result.tempo,
+      energy: result.energy || 'medium',
       reasoning: result.reasoning,
       generatedAt: new Date().toISOString(),
     };
@@ -249,6 +254,7 @@ Generate a pattern that ${
       key: 'C',
       mode: 'minor',
       tempo: 90,
+      energy: 'medium',
       reasoning: 'Fallback ambient pattern',
       generatedAt: new Date().toISOString(),
     };

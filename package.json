@@ -1,7 +1,7 @@
 {
-  "name": "ai-radio-station",
+  "name": "infinite-radio",
   "version": "1.0.0",
-  "description": "24/7 AI Radio Station - AI-generated music with Strudel patterns",
+  "description": "Infinite Radio - 24/7 AI-generated music powered by Claude & Strudel",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "build": "npm run build:client && npm run build:server",
     "build:server": "cd server && npm run build",
     "build:client": "cd client && npm run build",
-    "start": "node server/dist/index.js",
+    "start": "node server/dist/server/src/index.js",
     "docker:build": "docker build -t ai-radio-station .",
     "docker:run": "docker run -p 3001:3001 --env-file .env ai-radio-station"
   },

@@ -17,8 +17,6 @@ function App() {
   } = useWebSocket();
 
   const {
-    isPlaying,
-    isInitialized,
     error: strudelError,
     initialize,
     playPattern,
@@ -55,10 +53,10 @@ function App() {
         {/* Header */}
         <header className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent">
-            AI Radio Station
+            Infinite Radio
           </h1>
           <p className="text-gray-400 mt-2">
-            24/7 AI-generated music with Strudel
+            24/7 AI-generated music powered by Claude & Strudel
           </p>
         </header>
 
@@ -77,7 +75,6 @@ function App() {
 
         {/* Player */}
         <Player
-          isPlaying={isPlaying}
           hasStarted={hasStarted}
           listenerCount={listenerCount}
           isGenerating={isGenerating}
@@ -128,7 +125,7 @@ function App() {
 
         {/* Footer */}
         <footer className="text-center text-gray-600 text-sm pt-8">
-          <p>Powered by Claude AI and Strudel</p>
+          <p>Powered by Claude & Strudel</p>
         </footer>
       </div>
     </div>

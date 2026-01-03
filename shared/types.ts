@@ -27,6 +27,7 @@ export interface Segment {
   key: string;             // Musical key
   mode: string;            // Scale mode
   tempo: number;           // BPM (cycles per second * 60)
+  energy: 'low' | 'medium' | 'high';  // Energy level
   reasoning: string;       // AI's reasoning for this pattern
   generatedAt: string;
 }

@@ -10,47 +10,19 @@ export interface MusicalState {
     mode: string;
     tempo: number;
     style: string;
-    progressionPosition: number;
-    currentChord: string | null;
-    currentChordType: string | null;
-    lastNotes: {
-        melody: Array<{
-            note: string;
-            velocity: number;
-        }>;
-        bass: Array<{
-            note: string;
-            velocity: number;
-        }>;
-        chords: Array<{
-            notes: string[];
-            velocity: number;
-        }>;
-    };
-    dynamics: {
-        level: 'soft' | 'medium' | 'loud';
-        direction: 'building' | 'fading' | 'stable';
-        velocityTrend: number;
-    };
-    totalBars: number;
-    totalDurationSeconds: number;
+    energy: 'low' | 'medium' | 'high';
+    totalPatternsPlayed: number;
+    uptimeSeconds: number;
 }
 export interface Segment {
     id: string;
-    filename: string;
-    bars: number;
-    durationSeconds: number;
-    midiBase64: string;
+    patternCode: string;
+    style: string;
+    key: string;
+    mode: string;
+    tempo: number;
+    reasoning: string;
     generatedAt: string;
-}
-export interface Session {
-    id: string;
-    projectName: string;
-    state: MusicalState;
-    segments: Segment[];
-    journey: JourneyStep[];
-    createdAt: string;
-    updatedAt: string;
 }
 export type ExtensionDirection = 'continue' | 'build' | 'peak' | 'wind_down' | 'contrast';
 export interface JourneyStep {
@@ -72,44 +44,49 @@ export interface AIDecision {
     bars: number;
     reasoning: string;
 }
+export interface ChatMessage {
+    id: string;
+    username: string;
+    message: string;
+    timestamp: string;
+}
+export interface RadioState {
+    currentPattern: Segment | null;
+    patternHistory: Segment[];
+    journey: JourneyStep[];
+    state: MusicalState;
+    isGenerating: boolean;
+    listeners: number;
+    startedAt: string;
+}
 export type ClientMessage = {
-    type: 'generate';
-    params: GenerationParams;
-    prompt?: string;
+    type: 'join';
+    username: string;
 } | {
-    type: 'extend';
-    bars?: number;
-    prompt?: string;
-    direction?: ExtensionDirection;
-    style?: string;
-    mode?: string;
-} | {
-    type: 'auto_extend';
-} | {
-    type: 'status';
-} | {
-    type: 'reset';
-};
-export type ServerMessage = {
-    type: 'session';
-    session: Session;
-} | {
-    type: 'generating';
+    type: 'chat';
     message: string;
 } | {
-    type: 'segment';
-    segment: Segment;
+    type: 'sync';
+};
+export type ServerMessage = {
+    type: 'welcome';
+    radioState: RadioState;
+    recentChat: ChatMessage[];
 } | {
-    type: 'status';
-    session: Session;
+    type: 'pattern';
+    pattern: Segment;
+} | {
+    type: 'chat';
+    message: ChatMessage;
+} | {
+    type: 'ai_status';
+    isGenerating: boolean;
+    reasoning: string | null;
+} | {
+    type: 'listeners';
+    count: number;
 } | {
     type: 'error';
     error: string;
-} | {
-    type: 'thinking';
-    content: string;
-} | {
-    type: 'ai_decision';
-    decision: AIDecision;
 };
 //# sourceMappingURL=types.d.ts.map

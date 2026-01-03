@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { ClientMessage, ServerMessage, RadioState, Segment, ChatMessage } from '../../../shared/types';
+import type { ServerMessage, RadioState, Segment, ChatMessage } from '../../../shared/types';
 
 interface UseWebSocketReturn {
   connected: boolean;

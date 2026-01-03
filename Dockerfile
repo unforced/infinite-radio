@@ -51,4 +51,4 @@ ENV PORT=3001
 EXPOSE 3001
 
 # Start the server
-CMD ["node", "server/dist/index.js"]
+CMD ["node", "server/dist/server/src/index.js"]
