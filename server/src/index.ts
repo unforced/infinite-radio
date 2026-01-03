@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
+import { buildEnhancedPrompt, STYLE_EXAMPLES, STRUDEL_TECHNIQUES } from './strudel-library.js';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic();
@@ -111,46 +112,30 @@ function broadcastListenerCount() {
 // STRUDEL PATTERN GENERATION
 // ============================================
 
+// Build comprehensive examples from the library
 const STRUDEL_EXAMPLES = `
-// Ambient pad with arpeggios
-note("<c3 eb3 g3 bb3>/2")
-  .s("sawtooth")
-  .cutoff(800)
-  .resonance(10)
-  .attack(0.5)
-  .decay(0.2)
-  .sustain(0.8)
-  .release(1)
-  .room(0.8)
+=== LAYERING EXAMPLE ===
+${STRUDEL_TECHNIQUES.layering}
 
-// Lofi beat with piano
-stack(
-  note("c4 eb4 g4 bb4").s("piano").velocity(0.6),
-  s("bd*2, ~ sd, hh*4").bank("RolandTR808")
-).slow(2)
+=== MODULATION EXAMPLE ===
+${STRUDEL_TECHNIQUES.modulation}
 
-// Jazzy chords
-note("<Cm7 Fm7 Bb7 EbM7>/4")
-  .voicing()
-  .s("piano")
-  .velocity(0.5)
-  .room(0.5)
+=== EVOLUTION EXAMPLE ===
+${STRUDEL_TECHNIQUES.evolution}
 
-// Minimal techno
-stack(
-  s("bd bd bd bd").bank("RolandTR909"),
-  s("~ hh ~ hh").bank("RolandTR909").velocity(0.4),
-  note("c2 ~ c2 ~").s("sawtooth").cutoff(400).decay(0.1)
-).fast(2)
+=== STYLE EXAMPLES ===
 
-// Dreamy pads
-note("<C3 E3 G3 B3> <D3 F3 A3 C4>")
-  .s("sine")
-  .attack(2)
-  .release(4)
-  .room(0.9)
-  .delay(0.5)
-  .delaytime(0.375)
+// Ambient:
+${STYLE_EXAMPLES.ambient}
+
+// Lofi:
+${STYLE_EXAMPLES.lofi}
+
+// Techno:
+${STYLE_EXAMPLES.techno}
+
+// House:
+${STYLE_EXAMPLES.house}
 `;
 
 // Tool definition for structured pattern generation
@@ -221,21 +206,43 @@ ${chatContext}
 Example Strudel patterns:
 ${STRUDEL_EXAMPLES}
 
-Guidelines:
-1. Create a complete, valid Strudel pattern as a single expression
-2. Use stack() to layer multiple elements (drums, bass, melody, pads)
-3. Available synths: sine, sawtooth, square, triangle, piano
-4. Available drum banks: RolandTR808, RolandTR909
-5. Use .slow(2) or .fast(2) to adjust pattern speed
-6. Use .room() for reverb, .delay() for echo
-7. Patterns should be musical and evolving
-8. Consider listener suggestions from chat!
-9. Create smooth transitions from the current style
+=== ADVANCED TECHNIQUES ===
+
+LAYERING with stack():
+- Combine drums, bass, chords, and melody in one pattern
+- Each layer can have independent timing (.slow(), .fast())
+- Use velocity to balance layers
+
+MODULATION with signals:
+- sine.range(min, max).slow(n) - smooth oscillation
+- saw.range(min, max) - ramp up then reset
+- tri.range(min, max) - triangle wave
+- perlin.range(min, max) - organic noise
+- Apply to .cutoff(), .pan(), .room(), .delay()
+
+EVOLUTION with conditional modifiers:
+- .every(n, fn) - apply transformation every n cycles
+- .sometimes(fn) - 50% chance to apply
+- .rarely(fn) - 10% chance
+- .often(fn) - 75% chance
+- Example: .every(4, x => x.fast(2)).sometimes(x => x.rev())
+
+EFFECTS:
+- Filters: .lpf(freq), .hpf(freq), .bpf(freq)
+- Envelopes: .attack(s), .decay(s), .sustain(0-1), .release(s)
+- Space: .room(0-1), .size(0-1), .delay(wet), .delaytime(s), .delayfeedback(0-1)
+- Dynamics: .velocity(0-1), .pan(0-1)
+
+IMPORTANT:
+- Output must be a SINGLE expression (no let, const, or semicolons)
+- End result should be the pattern itself, NOT wrapped in .play()
+- Use stack() to combine multiple voices
+- Make it MUSICAL - think about rhythm, harmony, and texture
 
 Generate a pattern that ${
   radioState.state.totalPatternsPlayed === 0
     ? 'starts the journey with an inviting, ambient atmosphere'
-    : 'evolves the musical journey based on the current state'
+    : `evolves naturally from the current ${radioState.state.style} vibe with ${radioState.state.energy} energy`
 }.`;
 
   try {
