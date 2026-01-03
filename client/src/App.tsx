@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Player } from './components/Player';
 import { Chat } from './components/Chat';
+import { Visualizer } from './components/Visualizer';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useStrudelPlayer } from './hooks/useStrudelPlayer';
 import { useTheme } from './hooks/useTheme';
+import { useAudioAnalyzer } from './hooks/useAudioAnalyzer';
 
 function App() {
   const {
@@ -28,7 +30,10 @@ function App() {
   } = useStrudelPlayer();
 
   // Dynamic theming based on current pattern (applied via CSS custom properties)
-  useTheme(currentPattern);
+  const { theme } = useTheme(currentPattern);
+
+  // Audio visualization
+  const { audioData, isAnalyzing, startAnalyzing, stopAnalyzing } = useAudioAnalyzer();
 
   const [hasStarted, setHasStarted] = useState(false);
   const lastPatternIdRef = useRef<string | null>(null);
@@ -44,6 +49,7 @@ function App() {
   const handleStart = async () => {
     await initialize();
     setHasStarted(true);
+    startAnalyzing();
     if (currentPattern) {
       playPattern(currentPattern.patternCode);
     }
@@ -51,12 +57,23 @@ function App() {
 
   const handleStop = () => {
     stop();
+    stopAnalyzing();
     setHasStarted(false);
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 md:p-8 relative overflow-hidden">
+      {/* Background visualizer */}
+      <div className="fixed inset-0 z-0">
+        <Visualizer
+          audioData={audioData}
+          isActive={hasStarted && isAnalyzing}
+          mode="bars"
+          themeColor={theme.primary}
+        />
+      </div>
+
+      <div className="max-w-4xl mx-auto space-y-6 relative z-10">
         {/* Header */}
         <header className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent">
