@@ -3,6 +3,7 @@ import { Player } from './components/Player';
 import { Chat } from './components/Chat';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useStrudelPlayer } from './hooks/useStrudelPlayer';
+import { useTheme } from './hooks/useTheme';
 
 function App() {
   const {
@@ -22,6 +23,9 @@ function App() {
     playPattern,
     stop,
   } = useStrudelPlayer();
+
+  // Dynamic theming based on current pattern (applied via CSS custom properties)
+  useTheme(currentPattern);
 
   const [hasStarted, setHasStarted] = useState(false);
   const lastPatternIdRef = useRef<string | null>(null);

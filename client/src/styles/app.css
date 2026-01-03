@@ -2,37 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-gray-900 text-white;
+/* ============================================
+   THEME VARIABLES
+   ============================================ */
+:root {
+  /* Default theme (ambient) */
+  --theme-primary: #6366f1;
+  --theme-secondary: #818cf8;
+  --theme-accent: #a5b4fc;
+  --theme-background: #0f0f1a;
+  --theme-background-alt: #1a1a2e;
+  --theme-gradient-start: #1e1b4b;
+  --theme-gradient-end: #0f0f1a;
+  --theme-text: #e2e8f0;
+  --theme-text-muted: #94a3b8;
+  --theme-glow: rgba(99, 102, 241, 0.4);
+
+  /* Transition duration */
+  --theme-transition: 2s;
 }
 
+/* ============================================
+   BASE STYLES WITH THEME
+   ============================================ */
+body {
+  background: linear-gradient(
+    to bottom,
+    var(--theme-gradient-start),
+    var(--theme-gradient-end)
+  );
+  color: var(--theme-text);
+  transition: background var(--theme-transition) ease-in-out,
+              color var(--theme-transition) ease-in-out;
+  min-height: 100vh;
+}
+
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
 .btn {
-  @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-300;
 }
 
 .btn-primary {
-  @apply bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:opacity-50;
+  background-color: var(--theme-primary);
+  box-shadow: 0 0 20px var(--theme-glow);
+  transition: all var(--theme-transition) ease-in-out;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 30px var(--theme-glow);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  filter: saturate(0.5);
 }
 
 .btn-secondary {
-  @apply bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:opacity-50;
+  background-color: var(--theme-background-alt);
+  border: 1px solid var(--theme-secondary);
+  transition: all var(--theme-transition) ease-in-out;
+}
+
+.btn-secondary:hover {
+  background-color: var(--theme-secondary);
+  color: var(--theme-background);
 }
 
 .input {
-  @apply bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500;
+  background-color: var(--theme-background-alt);
+  border: 1px solid var(--theme-secondary);
+  color: var(--theme-text);
+  @apply rounded-lg px-3 py-2 focus:outline-none;
+  transition: all var(--theme-transition) ease-in-out;
+}
+
+.input:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 10px var(--theme-glow);
 }
 
 .select {
-  @apply bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500;
+  background-color: var(--theme-background-alt);
+  border: 1px solid var(--theme-secondary);
+  color: var(--theme-text);
+  @apply rounded-lg px-3 py-2 focus:outline-none;
+  transition: all var(--theme-transition) ease-in-out;
 }
 
 .card {
-  @apply bg-gray-800 rounded-xl p-4;
+  background-color: rgba(26, 26, 46, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  backdrop-filter: blur(10px);
+  @apply rounded-xl p-4;
+  transition: all var(--theme-transition) ease-in-out;
 }
 
-/* Piano roll visualization */
+.card-glow {
+  box-shadow: 0 0 40px var(--theme-glow);
+}
+
+/* ============================================
+   THEMED BADGES
+   ============================================ */
+.badge {
+  @apply px-2 py-1 rounded text-sm;
+  transition: all var(--theme-transition) ease-in-out;
+}
+
+.badge-primary {
+  background-color: color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  color: var(--theme-accent);
+}
+
+.badge-secondary {
+  background-color: color-mix(in srgb, var(--theme-secondary) 30%, transparent);
+  color: var(--theme-text);
+}
+
+/* ============================================
+   VISUALIZATION STYLES
+   ============================================ */
 .piano-roll {
-  @apply bg-gray-950 rounded-lg overflow-hidden;
+  background-color: var(--theme-background);
+  @apply rounded-lg overflow-hidden;
 }
 
 .piano-key {
@@ -40,19 +135,78 @@ body {
 }
 
 .piano-key-white {
-  @apply bg-purple-500;
+  background-color: var(--theme-primary);
 }
 
 .piano-key-black {
-  @apply bg-purple-400;
+  background-color: var(--theme-secondary);
 }
 
-/* Loading animation */
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%, 100% {
+    opacity: 0.5;
+    box-shadow: 0 0 20px var(--theme-glow);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 40px var(--theme-glow);
+  }
 }
 
 .loading-glow {
   animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-animate {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* ============================================
+   LIVE INDICATOR
+   ============================================ */
+.live-indicator {
+  @apply w-2 h-2 rounded-full;
+  background-color: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theme-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-primary);
 }
