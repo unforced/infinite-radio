@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-900 text-white;
+}
+
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-primary {
+  @apply bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:opacity-50;
+}
+
+.input {
+  @apply bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500;
+}
+
+.select {
+  @apply bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500;
+}
+
+.card {
+  @apply bg-gray-800 rounded-xl p-4;
+}
+
+/* Piano roll visualization */
+.piano-roll {
+  @apply bg-gray-950 rounded-lg overflow-hidden;
+}
+
+.piano-key {
+  @apply h-4 rounded-sm;
+}
+
+.piano-key-white {
+  @apply bg-purple-500;
+}
+
+.piano-key-black {
+  @apply bg-purple-400;
+}
+
+/* Loading animation */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.loading-glow {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
