@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildEnhancedPrompt, STYLE_EXAMPLES, STRUDEL_TECHNIQUES } from './strudel-library.js';
+import { journeyManager, type PatternGuidance } from './journey-manager.js';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic();
@@ -180,6 +181,9 @@ const patternTool: Anthropic.Tool = {
 };
 
 async function generateNextPattern(): Promise<Segment> {
+  // Get journey guidance
+  const guidance = journeyManager.getNextPatternGuidance(clients.size);
+
   const recentChat = chatMessages.slice(-10);
   let chatContext = '';
   if (recentChat.length > 0) {
@@ -192,11 +196,17 @@ async function generateNextPattern(): Promise<Segment> {
 
   const prompt = `You are an AI DJ for a 24/7 radio station. Generate Strudel (TidalCycles for JavaScript) pattern code.
 
-Current state:
-- Style: ${radioState.state.style}
+=== JOURNEY GUIDANCE ===
+${guidance.guidanceText}
+
+Suggested style: ${guidance.suggestedStyle}
+Suggested energy: ${guidance.suggestedEnergy}
+Target tempo: ~${guidance.targetTempo} BPM
+
+=== CURRENT STATE ===
+- Previous style: ${radioState.state.style}
 - Key: ${radioState.state.key} ${radioState.state.mode}
-- Tempo: ${radioState.state.tempo} BPM
-- Energy: ${radioState.state.energy}
+- Previous tempo: ${radioState.state.tempo} BPM
 - Patterns played: ${radioState.state.totalPatternsPlayed}
 - Listeners: ${clients.size}
 
@@ -341,10 +351,14 @@ async function generateAndBroadcast() {
       timestamp: new Date().toISOString(),
     });
 
+    // Advance the journey arc
+    journeyManager.advancePattern();
+
     // Broadcast new pattern
     broadcast({ type: 'pattern', pattern });
     broadcast({ type: 'ai_status', isGenerating: false, reasoning: pattern.reasoning });
 
+    console.log(`[Radio] ${journeyManager.getJourneySummary()}`);
     console.log(`[Radio] New pattern: ${pattern.style} in ${pattern.key} ${pattern.mode} - "${pattern.reasoning}"`);
     console.log(`[Radio] Pattern code: ${pattern.patternCode.slice(0, 100)}...`);
 
