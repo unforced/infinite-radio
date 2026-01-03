@@ -32,7 +32,11 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from client build in production
-const clientDist = path.join(__dirname, '../../client/dist');
+// In dev: server/src -> ../../client/dist
+// In prod (built with rootDir=".."): server/dist/server/src -> ../../../../client/dist
+const clientDist = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../../../../client/dist')
+  : path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDist));
 
 // Health check
