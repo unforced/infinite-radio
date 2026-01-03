@@ -13,8 +13,11 @@ function App() {
     isGenerating,
     aiReasoning,
     listenerCount,
+    patternFeedback,
+    userVote,
     error,
     sendChat,
+    sendVote,
   } = useWebSocket();
 
   const {
@@ -84,8 +87,11 @@ function App() {
           isGenerating={isGenerating}
           aiReasoning={aiReasoning}
           currentPattern={currentPattern}
+          patternFeedback={patternFeedback}
+          userVote={userVote}
           onStart={handleStart}
           onStop={handleStop}
+          onVote={(value) => currentPattern && sendVote(currentPattern.id, value)}
         />
 
         {/* Main content grid */}

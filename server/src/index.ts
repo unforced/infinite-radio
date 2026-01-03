@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildEnhancedPrompt, STYLE_EXAMPLES, STRUDEL_TECHNIQUES } from './strudel-library.js';
 import { journeyManager, type PatternGuidance } from './journey-manager.js';
+import { feedbackManager } from './feedback-manager.js';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic();
@@ -194,6 +195,10 @@ async function generateNextPattern(): Promise<Segment> {
     `${j.style} in ${j.key} ${j.mode} (${j.direction})`
   ).join(' → ');
 
+  // Get listener feedback context
+  const feedbackContext = feedbackManager.getFeedbackSummary();
+  const sentiment = feedbackManager.getOverallSentiment();
+
   const prompt = `You are an AI DJ for a 24/7 radio station. Generate Strudel (TidalCycles for JavaScript) pattern code.
 
 === JOURNEY GUIDANCE ===
@@ -211,6 +216,11 @@ Target tempo: ~${guidance.targetTempo} BPM
 - Listeners: ${clients.size}
 
 Journey so far: ${journeyContext || 'Just starting'}
+
+=== LISTENER FEEDBACK ===
+${feedbackContext}
+Overall mood: ${sentiment.sentiment} (score: ${sentiment.score.toFixed(2)})
+${sentiment.sentiment === 'negative' ? 'Consider adjusting the style or energy based on listener preferences.' : ''}
 ${chatContext}
 
 Example Strudel patterns:
@@ -447,6 +457,20 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        case 'vote': {
+          if (radioState.currentPattern && message.patternId === radioState.currentPattern.id) {
+            const listenerId = clients.get(ws) || 'anonymous';
+            const feedback = feedbackManager.recordVote(
+              message.patternId,
+              listenerId,
+              message.value
+            );
+            broadcast({ type: 'vote_update', feedback });
+            console.log(`[Radio] ${listenerId} voted ${message.value > 0 ? '👍' : '👎'} on current pattern`);
+          }
+          break;
+        }
+
         case 'sync': {
           ws.send(JSON.stringify({
             type: 'welcome',
@@ -464,6 +488,9 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     const username = clients.get(ws);
+    if (username) {
+      feedbackManager.removeListener(username);
+    }
     clients.delete(ws);
     broadcastListenerCount();
     console.log(`[Radio] ${username || 'Listener'} disconnected (${clients.size} listeners)`);

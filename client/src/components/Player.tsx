@@ -1,4 +1,5 @@
-import type { Segment } from '../../../shared/types';
+import type { Segment, PatternFeedback } from '../../../shared/types';
+import { VoteButtons } from './VoteButtons';
 
 interface PlayerProps {
   hasStarted: boolean;
@@ -6,8 +7,11 @@ interface PlayerProps {
   isGenerating: boolean;
   aiReasoning: string | null;
   currentPattern: Segment | null;
+  patternFeedback: PatternFeedback | null;
+  userVote: 1 | -1 | null;
   onStart: () => void;
   onStop: () => void;
+  onVote: (value: 1 | -1) => void;
 }
 
 export function Player({
@@ -16,8 +20,11 @@ export function Player({
   isGenerating,
   aiReasoning,
   currentPattern,
+  patternFeedback,
+  userVote,
   onStart,
   onStop,
+  onVote,
 }: PlayerProps) {
   return (
     <div className="card space-y-4">
@@ -67,6 +74,18 @@ export function Player({
         <p className="text-center text-gray-400 text-sm">
           Click to start listening
         </p>
+      )}
+
+      {/* Vote buttons - only show when playing */}
+      {hasStarted && currentPattern && (
+        <div className="flex justify-center">
+          <VoteButtons
+            patternId={currentPattern.id}
+            feedback={patternFeedback}
+            userVote={userVote}
+            onVote={onVote}
+          />
+        </div>
       )}
 
       {/* AI Status */}

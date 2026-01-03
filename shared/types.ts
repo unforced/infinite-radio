@@ -81,7 +81,15 @@ export interface RadioState {
 export type ClientMessage =
   | { type: 'join'; username: string }  // Join the radio station
   | { type: 'chat'; message: string }   // Send a chat message
+  | { type: 'vote'; patternId: string; value: 1 | -1 }  // Vote on pattern
   | { type: 'sync' };                   // Request current state sync
+
+// Pattern feedback from listeners
+export interface PatternFeedback {
+  patternId: string;
+  upvotes: number;
+  downvotes: number;
+}
 
 export type ServerMessage =
   | { type: 'welcome'; radioState: RadioState; recentChat: ChatMessage[] }
@@ -89,4 +97,5 @@ export type ServerMessage =
   | { type: 'chat'; message: ChatMessage }
   | { type: 'ai_status'; isGenerating: boolean; reasoning: string | null }
   | { type: 'listeners'; count: number }
+  | { type: 'vote_update'; feedback: PatternFeedback }  // Vote counts updated
   | { type: 'error'; error: string };

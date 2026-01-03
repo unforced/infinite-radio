@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { ServerMessage, RadioState, Segment, ChatMessage } from '../../../shared/types';
+import type { ServerMessage, RadioState, Segment, ChatMessage, PatternFeedback } from '../../../shared/types';
 
 interface UseWebSocketReturn {
   connected: boolean;
@@ -9,8 +9,11 @@ interface UseWebSocketReturn {
   isGenerating: boolean;
   aiReasoning: string | null;
   listenerCount: number;
+  patternFeedback: PatternFeedback | null;
+  userVote: 1 | -1 | null;
   error: string | null;
   sendChat: (message: string) => void;
+  sendVote: (patternId: string, value: 1 | -1) => void;
 }
 
 export function useWebSocket(): UseWebSocketReturn {
@@ -22,6 +25,8 @@ export function useWebSocket(): UseWebSocketReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiReasoning, setAiReasoning] = useState<string | null>(null);
   const [listenerCount, setListenerCount] = useState(0);
+  const [patternFeedback, setPatternFeedback] = useState<PatternFeedback | null>(null);
+  const [userVote, setUserVote] = useState<1 | -1 | null>(null);
   const [error, setError] = useState<string | null>(null);
   const hasJoinedRef = useRef(false);
 
@@ -71,6 +76,13 @@ export function useWebSocket(): UseWebSocketReturn {
 
           case 'pattern':
             setCurrentPattern(message.pattern);
+            // Reset feedback state for new pattern
+            setPatternFeedback(null);
+            setUserVote(null);
+            break;
+
+          case 'vote_update':
+            setPatternFeedback(message.feedback);
             break;
 
           case 'chat':
@@ -108,6 +120,15 @@ export function useWebSocket(): UseWebSocketReturn {
     }
   }, []);
 
+  const sendVote = useCallback((patternId: string, value: 1 | -1) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'vote', patternId, value }));
+      setUserVote(value);
+    } else {
+      setError('Not connected to server');
+    }
+  }, []);
+
   return {
     connected,
     radioState,
@@ -116,7 +137,10 @@ export function useWebSocket(): UseWebSocketReturn {
     isGenerating,
     aiReasoning,
     listenerCount,
+    patternFeedback,
+    userVote,
     error,
     sendChat,
+    sendVote,
   };
 }
