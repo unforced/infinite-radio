@@ -6,13 +6,16 @@ import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 
-// Check for Claude OAuth token
-if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-  console.warn('⚠️  CLAUDE_CODE_OAUTH_TOKEN not set!');
-  console.warn('   Run `claude setup-token` to get your token');
-  console.warn('   Then set: export CLAUDE_CODE_OAUTH_TOKEN=<token>');
+// Initialize Anthropic client
+const anthropic = new Anthropic();
+
+// Check for API key
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.warn('⚠️  ANTHROPIC_API_KEY not set!');
+  console.warn('   Get your API key from https://console.anthropic.com');
+  console.warn('   Then set: export ANTHROPIC_API_KEY=<key>');
 }
 import type {
   ClientMessage,
@@ -150,21 +153,45 @@ note("<C3 E3 G3 B3> <D3 F3 A3 C4>")
   .delaytime(0.375)
 `;
 
-const patternSchema = {
-  type: 'object',
-  properties: {
-    patternCode: {
-      type: 'string',
-      description: 'Valid Strudel pattern code. Use stack() for layers, note() for melodies, s() for samples. Must be a single expression.'
+// Tool definition for structured pattern generation
+const patternTool: Anthropic.Tool = {
+  name: 'generate_pattern',
+  description: 'Generate a Strudel music pattern for the radio station',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      patternCode: {
+        type: 'string',
+        description: 'Valid Strudel pattern code. Use stack() for layers, note() for melodies, s() for samples. Must be a single expression that can be evaluated.'
+      },
+      style: {
+        type: 'string',
+        description: 'The musical style (e.g., ambient, lofi, techno, jazz, house)'
+      },
+      key: {
+        type: 'string',
+        description: 'Musical key (e.g., C, D, F#, Bb)'
+      },
+      mode: {
+        type: 'string',
+        description: 'Scale mode (e.g., major, minor, dorian, mixolydian)'
+      },
+      tempo: {
+        type: 'number',
+        description: 'Tempo in BPM (60-140)'
+      },
+      energy: {
+        type: 'string',
+        enum: ['low', 'medium', 'high'],
+        description: 'Energy level of the pattern'
+      },
+      reasoning: {
+        type: 'string',
+        description: 'Brief explanation of why this pattern fits the current moment'
+      },
     },
-    style: { type: 'string' },
-    key: { type: 'string' },
-    mode: { type: 'string' },
-    tempo: { type: 'number', minimum: 60, maximum: 140 },
-    energy: { type: 'string', enum: ['low', 'medium', 'high'] },
-    reasoning: { type: 'string' },
+    required: ['patternCode', 'style', 'key', 'mode', 'tempo', 'energy', 'reasoning'],
   },
-  required: ['patternCode', 'style', 'key', 'mode', 'tempo', 'energy', 'reasoning'],
 };
 
 async function generateNextPattern(): Promise<Segment> {
@@ -212,30 +239,32 @@ Generate a pattern that ${
 }.`;
 
   try {
-    let result: any = null;
-    for await (const message of query({
-      prompt,
-      options: {
-        model: 'claude-sonnet-4-20250514',
-        outputFormat: {
-          type: 'json_schema',
-          schema: patternSchema,
-        },
-        permissionMode: 'bypassPermissions',
-      },
-    })) {
-      if (message.type === 'result') {
-        // Access structured output from the result message
-        const resultMsg = message as any;
-        if (resultMsg.structured_output) {
-          result = resultMsg.structured_output;
-        }
-      }
-    }
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      tools: [patternTool],
+      tool_choice: { type: 'tool', name: 'generate_pattern' },
+      messages: [{ role: 'user', content: prompt }],
+    });
 
-    if (!result) {
+    // Extract the tool use result
+    const toolUse = response.content.find(
+      (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
+    );
+
+    if (!toolUse || toolUse.name !== 'generate_pattern') {
       throw new Error('No pattern generated');
     }
+
+    const result = toolUse.input as {
+      patternCode: string;
+      style: string;
+      key: string;
+      mode: string;
+      tempo: number;
+      energy: string;
+      reasoning: string;
+    };
 
     return {
       id: uuidv4(),
@@ -244,7 +273,7 @@ Generate a pattern that ${
       key: result.key,
       mode: result.mode,
       tempo: result.tempo,
-      energy: result.energy || 'medium',
+      energy: (result.energy || 'medium') as 'low' | 'medium' | 'high',
       reasoning: result.reasoning,
       generatedAt: new Date().toISOString(),
     };
