@@ -51,12 +51,13 @@ export function useAudioAnalyzer(): UseAudioAnalyzerReturn {
 
       if (strudelAudioContext) {
         audioContextRef.current = strudelAudioContext;
-        analyzerRef.current = strudelAudioContext.createAnalyser();
-        analyzerRef.current.fftSize = 128;
-        analyzerRef.current.smoothingTimeConstant = 0.8;
+        const analyzer = strudelAudioContext.createAnalyser();
+        analyzer.fftSize = 128;
+        analyzer.smoothingTimeConstant = 0.8;
+        analyzerRef.current = analyzer;
 
         // Connect to destination to analyze output
-        strudelAudioContext.destination.connect(analyzerRef.current);
+        strudelAudioContext.destination.connect(analyzer);
         console.log('[AudioAnalyzer] Connected to Strudel audio context');
         return true;
       }
