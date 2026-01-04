@@ -6,12 +6,13 @@ import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import { query, type Message } from '@anthropic-ai/claude-agent-sdk';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildEnhancedPrompt, STYLE_EXAMPLES, STRUDEL_TECHNIQUES } from './strudel-library.js';
 import { journeyManager, type PatternGuidance } from './journey-manager.js';
 import { feedbackManager } from './feedback-manager.js';
 
-// Initialize Anthropic client
+// Initialize Anthropic client (fallback for when Agent SDK fails)
 const anthropic = new Anthropic();
 
 // Check for API key
@@ -20,6 +21,9 @@ if (!process.env.ANTHROPIC_API_KEY) {
   console.warn('   Get your API key from https://console.anthropic.com');
   console.warn('   Then set: export ANTHROPIC_API_KEY=<key>');
 }
+
+// Flag to track if Agent SDK is available
+let useAgentSDK = true;
 import type {
   ClientMessage,
   ServerMessage,
@@ -181,8 +185,8 @@ const patternTool: Anthropic.Tool = {
   },
 };
 
-async function generateNextPattern(): Promise<Segment> {
-  // Get journey guidance
+// Build the prompt for pattern generation
+function buildPatternPrompt(): string {
   const guidance = journeyManager.getNextPatternGuidance(clients.size);
 
   const recentChat = chatMessages.slice(-10);
@@ -195,11 +199,10 @@ async function generateNextPattern(): Promise<Segment> {
     `${j.style} in ${j.key} ${j.mode} (${j.direction})`
   ).join(' → ');
 
-  // Get listener feedback context
   const feedbackContext = feedbackManager.getFeedbackSummary();
   const sentiment = feedbackManager.getOverallSentiment();
 
-  const prompt = `You are an AI DJ for a 24/7 radio station. Generate Strudel (TidalCycles for JavaScript) pattern code.
+  return `You are an AI DJ for a 24/7 radio station. Generate Strudel (TidalCycles for JavaScript) pattern code.
 
 === JOURNEY GUIDANCE ===
 ${guidance.guidanceText}
@@ -263,7 +266,92 @@ Generate a pattern that ${
   radioState.state.totalPatternsPlayed === 0
     ? 'starts the journey with an inviting, ambient atmosphere'
     : `evolves naturally from the current ${radioState.state.style} vibe with ${radioState.state.energy} energy`
-}.`;
+}.
+
+RESPOND WITH EXACTLY THIS JSON FORMAT (no other text):
+{
+  "patternCode": "your strudel pattern code here",
+  "style": "ambient/lofi/techno/house/jazz/etc",
+  "key": "C/D/E/F/G/A/B with optional # or b",
+  "mode": "major/minor/dorian/etc",
+  "tempo": 90,
+  "energy": "low/medium/high",
+  "reasoning": "Brief explanation of your choices"
+}`;
+}
+
+// Generate pattern using Claude Agent SDK
+async function generateWithAgentSDK(): Promise<Segment | null> {
+  const prompt = buildPatternPrompt();
+
+  console.log('[Radio] Using Claude Agent SDK for pattern generation...');
+
+  try {
+    let resultText = '';
+
+    for await (const message of query({
+      prompt,
+      options: {
+        model: 'claude-sonnet-4-5-20250929',
+        maxTurns: 3,
+        permissionMode: 'bypassPermissions',
+        cwd: process.cwd(),
+        // Pass PATH explicitly to fix Docker "spawn node ENOENT" error
+        env: {
+          PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+          ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
+        },
+      },
+    })) {
+      if ('result' in message) {
+        resultText = message.result;
+      }
+    }
+
+    if (!resultText) {
+      throw new Error('No result from Agent SDK');
+    }
+
+    // Parse JSON from the response
+    const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
+    }
+
+    const result = JSON.parse(jsonMatch[0]) as {
+      patternCode: string;
+      style: string;
+      key: string;
+      mode: string;
+      tempo: number;
+      energy: string;
+      reasoning: string;
+    };
+
+    console.log('[Radio] Agent SDK generated pattern successfully');
+
+    return {
+      id: uuidv4(),
+      patternCode: result.patternCode,
+      style: result.style,
+      key: result.key,
+      mode: result.mode,
+      tempo: result.tempo,
+      energy: (result.energy || 'medium') as 'low' | 'medium' | 'high',
+      reasoning: result.reasoning,
+      generatedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('[Radio] Agent SDK error:', error);
+    return null;
+  }
+}
+
+// Generate pattern using direct Anthropic API (fallback)
+async function generateWithDirectAPI(): Promise<Segment | null> {
+  const prompt = buildPatternPrompt();
+
+  console.log('[Radio] Using direct Anthropic API for pattern generation...');
 
   try {
     const response = await anthropic.messages.create({
@@ -274,7 +362,6 @@ Generate a pattern that ${
       messages: [{ role: 'user', content: prompt }],
     });
 
-    // Extract the tool use result
     const toolUse = response.content.find(
       (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
     );
@@ -293,6 +380,8 @@ Generate a pattern that ${
       reasoning: string;
     };
 
+    console.log('[Radio] Direct API generated pattern successfully');
+
     return {
       id: uuidv4(),
       patternCode: result.patternCode,
@@ -305,20 +394,40 @@ Generate a pattern that ${
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('[Radio] Pattern generation error:', error);
-    // Fallback pattern
-    return {
-      id: uuidv4(),
-      patternCode: `note("<c3 eb3 g3 bb3>/4").s("sawtooth").cutoff(800).room(0.8)`,
-      style: 'ambient',
-      key: 'C',
-      mode: 'minor',
-      tempo: 90,
-      energy: 'medium',
-      reasoning: 'Fallback ambient pattern',
-      generatedAt: new Date().toISOString(),
-    };
+    console.error('[Radio] Direct API error:', error);
+    return null;
   }
+}
+
+async function generateNextPattern(): Promise<Segment> {
+  // Try Agent SDK first if enabled
+  if (useAgentSDK) {
+    const result = await generateWithAgentSDK();
+    if (result) {
+      return result;
+    }
+    console.log('[Radio] Agent SDK failed, falling back to direct API');
+  }
+
+  // Fall back to direct API
+  const result = await generateWithDirectAPI();
+  if (result) {
+    return result;
+  }
+
+  // Ultimate fallback pattern
+  console.log('[Radio] All generation methods failed, using fallback pattern');
+  return {
+    id: uuidv4(),
+    patternCode: `note("<c3 eb3 g3 bb3>/4").s("sawtooth").cutoff(800).room(0.8)`,
+    style: 'ambient',
+    key: 'C',
+    mode: 'minor',
+    tempo: 90,
+    energy: 'medium',
+    reasoning: 'Fallback ambient pattern',
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 // ============================================

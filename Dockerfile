@@ -1,7 +1,10 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Copy all package files first
 COPY package*.json ./
@@ -27,7 +30,13 @@ RUN cd client && npm run build
 RUN cd server && npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:20-slim
+
+# Install bash and git (required for Claude Code CLI)
+RUN apt-get update && apt-get install -y bash git && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI globally (required for Agent SDK)
+RUN npm install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
@@ -44,6 +53,10 @@ COPY shared/ ./shared/
 # Copy built assets from builder
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/server/dist ./server/dist
+
+# Create non-root user (required for Claude CLI security)
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
 
 # Set environment
 ENV NODE_ENV=production
