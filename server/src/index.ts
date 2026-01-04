@@ -6,7 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
-import { query, type Message } from '@anthropic-ai/claude-agent-sdk';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildEnhancedPrompt, STYLE_EXAMPLES, STRUDEL_TECHNIQUES } from './strudel-library.js';
 import { journeyManager, type PatternGuidance } from './journey-manager.js';
