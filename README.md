@@ -35,7 +35,7 @@ Infinite Radio continuously generates unique electronic music patterns using AI.
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/infinite-radio.git
+git clone https://github.com/unforced/infinite-radio.git
 cd infinite-radio
 
 # Install dependencies
