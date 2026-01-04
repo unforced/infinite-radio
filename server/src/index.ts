@@ -34,6 +34,70 @@ if (!hasOAuthToken && !hasApiKey) {
 
 // Flag to track if Agent SDK should be used
 let useAgentSDK = hasOAuthToken;
+
+// ============================================
+// PATTERN VALIDATION
+// ============================================
+
+const FALLBACK_PATTERN = `note("<c3 eb3 g3 bb3>/4").s("sawtooth").cutoff(800).room(0.8)`;
+
+/**
+ * Validate Strudel pattern code for common issues
+ */
+function validatePatternCode(code: string): { valid: boolean; reason?: string } {
+  if (!code || !code.trim()) {
+    return { valid: false, reason: 'Empty pattern' };
+  }
+
+  const trimmed = code.trim();
+
+  // Pattern starting with a string literal that has methods called on it incorrectly
+  // e.g., "0.4 0.6".slow() - strings don't have Strudel methods
+  if (/^["'][^"']*["']\s*\./.test(trimmed) &&
+      !trimmed.startsWith('note(') &&
+      !trimmed.startsWith('s(') &&
+      !trimmed.startsWith('sound(')) {
+    return { valid: false, reason: 'Pattern starts with invalid string literal' };
+  }
+
+  // Check for unbalanced parentheses
+  let parenCount = 0;
+  for (const char of trimmed) {
+    if (char === '(') parenCount++;
+    if (char === ')') parenCount--;
+    if (parenCount < 0) return { valid: false, reason: 'Unbalanced parentheses' };
+  }
+  if (parenCount !== 0) return { valid: false, reason: 'Unbalanced parentheses' };
+
+  // Check for unbalanced brackets
+  let bracketCount = 0;
+  for (const char of trimmed) {
+    if (char === '[') bracketCount++;
+    if (char === ']') bracketCount--;
+    if (bracketCount < 0) return { valid: false, reason: 'Unbalanced brackets' };
+  }
+  if (bracketCount !== 0) return { valid: false, reason: 'Unbalanced brackets' };
+
+  // Check for statements (semicolons, let, const, var) which aren't allowed
+  if (/;/.test(trimmed) || /\b(let|const|var)\s/.test(trimmed)) {
+    return { valid: false, reason: 'Pattern contains statements - must be single expression' };
+  }
+
+  // Check for common Strudel functions at the start
+  const validStarters = [
+    'note', 'n', 's', 'sound', 'stack', 'sequence', 'cat', 'fastcat', 'slowcat',
+    'polymeter', 'polyrhythm', 'silence', 'pure', 'mini', 'seq', 'chord'
+  ];
+  const startsValid = validStarters.some(fn =>
+    trimmed.startsWith(`${fn}(`) || trimmed.startsWith(`${fn} (`)
+  );
+
+  if (!startsValid) {
+    return { valid: false, reason: 'Pattern does not start with valid Strudel function' };
+  }
+
+  return { valid: true };
+}
 import type {
   ClientMessage,
   ServerMessage,
@@ -341,7 +405,15 @@ async function generateWithAgentSDK(): Promise<Segment | null> {
       reasoning: string;
     };
 
-    console.log('[Radio] Agent SDK generated pattern successfully');
+    // Validate the generated pattern
+    const validation = validatePatternCode(result.patternCode);
+    if (!validation.valid) {
+      console.error(`[Radio] Agent SDK generated invalid pattern: ${validation.reason}`);
+      console.error('[Radio] Pattern was:', result.patternCode);
+      throw new Error(`Invalid pattern: ${validation.reason}`);
+    }
+
+    console.log('[Radio] Agent SDK generated valid pattern successfully');
 
     return {
       id: uuidv4(),
@@ -393,7 +465,15 @@ async function generateWithDirectAPI(): Promise<Segment | null> {
       reasoning: string;
     };
 
-    console.log('[Radio] Direct API generated pattern successfully');
+    // Validate the generated pattern
+    const validation = validatePatternCode(result.patternCode);
+    if (!validation.valid) {
+      console.error(`[Radio] Direct API generated invalid pattern: ${validation.reason}`);
+      console.error('[Radio] Pattern was:', result.patternCode);
+      throw new Error(`Invalid pattern: ${validation.reason}`);
+    }
+
+    console.log('[Radio] Direct API generated valid pattern successfully');
 
     return {
       id: uuidv4(),
