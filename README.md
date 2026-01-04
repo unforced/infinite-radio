@@ -157,7 +157,9 @@ Contributions welcome! Some ideas:
 
 ## License
 
-MIT
+AGPL-3.0-or-later
+
+This project uses [Strudel](https://strudel.cc/) which is licensed under AGPL-3.0. To comply with the AGPL's copyleft requirements, this project is also licensed under AGPL-3.0. See [LICENSE](LICENSE) for details.
 
 ## Credits
 

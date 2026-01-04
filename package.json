@@ -2,6 +2,7 @@
   "name": "infinite-radio",
   "version": "1.0.0",
   "description": "Infinite Radio - 24/7 AI-generated music powered by Claude & Strudel",
+  "license": "AGPL-3.0-or-later",
   "private": true,
   "type": "module",
   "scripts": {
