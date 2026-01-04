@@ -15,15 +15,25 @@ import { feedbackManager } from './feedback-manager.js';
 // Initialize Anthropic client (fallback for when Agent SDK fails)
 const anthropic = new Anthropic();
 
-// Check for API key
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.warn('⚠️  ANTHROPIC_API_KEY not set!');
-  console.warn('   Get your API key from https://console.anthropic.com');
-  console.warn('   Then set: export ANTHROPIC_API_KEY=<key>');
+// Check for authentication - Agent SDK prefers OAuth token, fallback API uses API key
+const hasOAuthToken = !!process.env.CLAUDE_CODE_OAUTH_TOKEN;
+const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+
+if (!hasOAuthToken && !hasApiKey) {
+  console.warn('⚠️  No authentication configured!');
+  console.warn('   For Claude Agent SDK: export CLAUDE_CODE_OAUTH_TOKEN=<token>');
+  console.warn('   For direct API fallback: export ANTHROPIC_API_KEY=<key>');
+} else {
+  if (hasOAuthToken) {
+    console.log('✓ CLAUDE_CODE_OAUTH_TOKEN set - Agent SDK enabled');
+  }
+  if (hasApiKey) {
+    console.log('✓ ANTHROPIC_API_KEY set - Direct API fallback enabled');
+  }
 }
 
-// Flag to track if Agent SDK is available
-let useAgentSDK = true;
+// Flag to track if Agent SDK should be used
+let useAgentSDK = hasOAuthToken;
 import type {
   ClientMessage,
   ServerMessage,
@@ -297,8 +307,11 @@ async function generateWithAgentSDK(): Promise<Segment | null> {
         permissionMode: 'bypassPermissions',
         cwd: process.cwd(),
         // Pass PATH explicitly to fix Docker "spawn node ENOENT" error
+        // Pass OAuth token for authentication
         env: {
           PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+          CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN || '',
+          // Also pass API key as fallback auth method
           ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
         },
       },

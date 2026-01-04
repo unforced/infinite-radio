@@ -37,7 +37,6 @@ export function useAudioAnalyzer(): UseAudioAnalyzerReturn {
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastBassRef = useRef(0);
   const beatHoldRef = useRef(0);
@@ -62,32 +61,10 @@ export function useAudioAnalyzer(): UseAudioAnalyzerReturn {
         return true;
       }
 
-      // Option 2: Create a new audio context and capture system audio
-      // This works if the user allows media capture
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-          },
-        });
-
-        audioContextRef.current = new AudioContext();
-        analyzerRef.current = audioContextRef.current.createAnalyser();
-        analyzerRef.current.fftSize = 128;
-        analyzerRef.current.smoothingTimeConstant = 0.8;
-
-        sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
-        sourceRef.current.connect(analyzerRef.current);
-
-        console.log('[AudioAnalyzer] Using microphone input for visualization');
-        return true;
-      } catch {
-        // Microphone access denied - use simulated data
-        console.log('[AudioAnalyzer] Using simulated audio data');
-        return false;
-      }
+      // No Strudel audio context found - use simulated data for visualization
+      // (We don't request microphone access to avoid permission prompts)
+      console.log('[AudioAnalyzer] Using simulated audio data for visualization');
+      return false;
     } catch (err) {
       console.error('[AudioAnalyzer] Setup error:', err);
       return false;
@@ -204,12 +181,6 @@ export function useAudioAnalyzer(): UseAudioAnalyzerReturn {
   useEffect(() => {
     return () => {
       stopAnalyzing();
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        // Don't close Strudel's context
-        if (sourceRef.current) {
-          audioContextRef.current.close();
-        }
-      }
     };
   }, [stopAnalyzing]);
 
