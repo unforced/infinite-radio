@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
-import type { AudioData } from '../hooks/useAudioAnalyzer';
+import type { VisualizerData } from '../hooks/usePatternVisualizer';
 
 type VisualizationMode = 'bars' | 'waveform' | 'circles' | 'particles';
 
 interface VisualizerProps {
-  audioData: AudioData;
+  data: VisualizerData;
   isActive: boolean;
   mode?: VisualizationMode;
   themeColor?: string;
@@ -22,7 +22,7 @@ interface Particle {
 }
 
 export function Visualizer({
-  audioData,
+  data,
   isActive,
   mode = 'bars',
   themeColor = '#6366f1',
@@ -59,16 +59,16 @@ export function Visualizer({
 
       switch (mode) {
         case 'bars':
-          renderBars(ctx, canvas, audioData, themeColor);
+          renderBars(ctx, canvas, data, themeColor);
           break;
         case 'waveform':
-          renderWaveform(ctx, canvas, audioData, themeColor);
+          renderWaveform(ctx, canvas, data, themeColor);
           break;
         case 'circles':
-          renderCircles(ctx, canvas, audioData, themeColor);
+          renderCircles(ctx, canvas, data, themeColor);
           break;
         case 'particles':
-          renderParticles(ctx, canvas, audioData, themeColor, particlesRef.current);
+          renderParticles(ctx, canvas, data, themeColor, particlesRef.current);
           break;
       }
 
@@ -82,7 +82,7 @@ export function Visualizer({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [audioData, isActive, mode, themeColor, dimensions]);
+  }, [data, isActive, mode, themeColor, dimensions]);
 
   if (!isActive) return null;
 
@@ -100,11 +100,11 @@ export function Visualizer({
 function renderBars(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  audioData: AudioData,
+  data: VisualizerData,
   themeColor: string
 ) {
-  const { frequencies, isBeat } = audioData;
-  const barCount = Math.min(32, frequencies.length);
+  const { bass, mid, high, beatPhase, isBeat, energy } = data;
+  const barCount = 16;
   const barWidth = canvas.width / barCount;
   const maxHeight = canvas.height * 0.6;
 
@@ -112,7 +112,22 @@ function renderBars(
   const rgb = hexToRgb(themeColor) || { r: 99, g: 102, b: 241 };
 
   for (let i = 0; i < barCount; i++) {
-    const value = frequencies[Math.floor(i * frequencies.length / barCount)] / 255;
+    // Create frequency curve: bass on left, highs on right
+    const position = i / barCount;
+    let value: number;
+
+    if (position < 0.33) {
+      value = bass * (1 - position * 2);
+    } else if (position < 0.66) {
+      value = mid;
+    } else {
+      value = high * (position * 1.5);
+    }
+
+    // Add some variation based on beat phase
+    value += Math.sin(beatPhase * Math.PI * 2 + i * 0.5) * 0.1 * energy;
+    value = Math.max(0, Math.min(1, value));
+
     const height = value * maxHeight;
     const x = i * barWidth;
     const y = canvas.height - height;
@@ -132,10 +147,11 @@ function renderBars(
 function renderWaveform(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  audioData: AudioData,
+  data: VisualizerData,
   themeColor: string
 ) {
-  const { waveform, volume } = audioData;
+  const { bass, mid, high, beatPhase, energy } = data;
+  const volume = (bass + mid + high) / 3;
   const rgb = hexToRgb(themeColor) || { r: 99, g: 102, b: 241 };
 
   ctx.beginPath();
@@ -144,12 +160,18 @@ function renderWaveform(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  const sliceWidth = canvas.width / waveform.length;
+  const points = 64;
+  const sliceWidth = canvas.width / points;
   let x = 0;
 
-  for (let i = 0; i < waveform.length; i++) {
-    const v = waveform[i] / 128.0;
-    const y = (v * canvas.height) / 2;
+  for (let i = 0; i < points; i++) {
+    // Generate smooth waveform based on beat phase and frequencies
+    const phase = beatPhase * Math.PI * 2;
+    const wave = Math.sin(phase + i * 0.3) * bass * 0.3 +
+                 Math.sin(phase * 2 + i * 0.5) * mid * 0.2 +
+                 Math.sin(phase * 4 + i * 0.7) * high * 0.1;
+
+    const y = canvas.height / 2 + wave * canvas.height * 0.3 * energy;
 
     if (i === 0) {
       ctx.moveTo(x, y);
@@ -173,10 +195,10 @@ function renderWaveform(
 function renderCircles(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  audioData: AudioData,
+  data: VisualizerData,
   themeColor: string
 ) {
-  const { bass, mid, high, isBeat } = audioData;
+  const { bass, mid, high, isBeat } = data;
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
   const rgb = hexToRgb(themeColor) || { r: 99, g: 102, b: 241 };
@@ -209,17 +231,17 @@ function renderCircles(
 function renderParticles(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  audioData: AudioData,
+  data: VisualizerData,
   themeColor: string,
   particles: Particle[]
 ) {
-  const { bass, volume, isBeat } = audioData;
+  const { bass, isBeat, energy } = data;
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
   const rgb = hexToRgb(themeColor) || { r: 99, g: 102, b: 241 };
 
-  // Spawn new particles on beat or when volume is high
-  if (isBeat || (volume > 0.5 && Math.random() > 0.7)) {
+  // Spawn new particles on beat or when energy is high
+  if (isBeat || (energy > 0.7 && Math.random() > 0.7)) {
     const count = isBeat ? 5 : 2;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -232,7 +254,7 @@ function renderParticles(
         life: 1,
         maxLife: 60 + Math.random() * 60,
         size: 2 + Math.random() * 4,
-        hue: Math.random() * 30 - 15, // Slight hue variation
+        hue: Math.random() * 30 - 15,
       });
     }
   }

@@ -5,7 +5,7 @@ import { Visualizer } from './components/Visualizer';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useStrudelPlayer } from './hooks/useStrudelPlayer';
 import { useTheme } from './hooks/useTheme';
-import { useAudioAnalyzer } from './hooks/useAudioAnalyzer';
+import { usePatternVisualizer } from './hooks/usePatternVisualizer';
 
 function App() {
   const {
@@ -32,8 +32,8 @@ function App() {
   // Dynamic theming based on current pattern (applied via CSS custom properties)
   const { theme } = useTheme(currentPattern);
 
-  // Audio visualization
-  const { audioData, isAnalyzing, startAnalyzing, stopAnalyzing } = useAudioAnalyzer();
+  // Pattern-based visualization (syncs to tempo and style)
+  const { data: visualizerData, isActive: isVisualizing, start: startVisualizer, stop: stopVisualizer } = usePatternVisualizer(currentPattern);
 
   const [hasStarted, setHasStarted] = useState(false);
   const lastPatternIdRef = useRef<string | null>(null);
@@ -49,7 +49,7 @@ function App() {
   const handleStart = async () => {
     await initialize();
     setHasStarted(true);
-    startAnalyzing();
+    startVisualizer();
     if (currentPattern) {
       playPattern(currentPattern.patternCode);
     }
@@ -57,7 +57,7 @@ function App() {
 
   const handleStop = () => {
     stop();
-    stopAnalyzing();
+    stopVisualizer();
     setHasStarted(false);
   };
 
@@ -66,8 +66,8 @@ function App() {
       {/* Background visualizer */}
       <div className="fixed inset-0 z-0">
         <Visualizer
-          audioData={audioData}
-          isActive={hasStarted && isAnalyzing}
+          data={visualizerData}
+          isActive={hasStarted && isVisualizing}
           mode="bars"
           themeColor={theme.primary}
         />
